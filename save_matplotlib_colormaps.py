@@ -8,8 +8,9 @@ from scipy.io import savemat
 def complementary_colormap(cmap,new_cmap_name='complementary_cmap'):
     from colorspacious import cspace_converter
 
+    if isinstance(cmap,str):
+        cmap=plt.get_cmap(cmap,256)
 
-    
     try:
         n=cmap.N
         v=np.linspace(0,1,n)
@@ -25,6 +26,27 @@ def complementary_colormap(cmap,new_cmap_name='complementary_cmap'):
     new_rgb=np.clip(new_rgb,0,1)
     new_cmap=LinearSegmentedColormap.from_list(new_cmap_name, new_rgb[0,:,:],N=n)
 
+    return new_cmap
+
+def complementary_diverging_colormap(cmap,new_cmap_name='complementary_diverging_cmap'):
+ 
+    if isinstance(cmap,str):
+        cmap=plt.get_cmap(cmap,256)
+
+    try:
+        n=cmap.N
+    except TypeError:
+        n=cmap.shape[0]
+        cmap=LinearSegmentedColormap.from_list("tmp", cmap,N=n)
+
+    new_cmap = complementary_colormap(cmap)
+
+    halfn=n//2
+    cmap1 = cmap(np.linspace(0,1,halfn))
+    cmap2 = new_cmap(np.linspace(1,0,halfn))
+    new_rgb=np.vstack((cmap2,cmap1))
+    
+    new_cmap=LinearSegmentedColormap.from_list(new_cmap_name, new_rgb,N=n)
     return new_cmap
 
 def write_cmap_matfile(outfile,n=256,add_complementary=False, add_complementary_diverging=False):
@@ -55,13 +77,10 @@ def write_cmap_matfile(outfile,n=256,add_complementary=False, add_complementary_
             else:
                 new_cname=cname+"_compdiv"
             
-            halfn=n//2
-            new_cmap = complementary_colormap(plt.get_cmap(cname+"_r", halfn))
+            new_cmap = complementary_diverging_colormap(plt.get_cmap(cname, n))
 
             print("Adding %s" % (new_cname))
-            cmap1 = plt.get_cmap(cname, halfn)(range(halfn))
-            cmap2 = new_cmap(range(halfn))
-            cmap=np.vstack((cmap2,cmap1))
+            cmap = new_cmap(range(n))
             C[new_cname]=cmap[:,:3]
 
             print("Adding %s" % (new_cname+"_r"))
