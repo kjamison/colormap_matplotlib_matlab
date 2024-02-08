@@ -49,6 +49,22 @@ def complementary_diverging_colormap(cmap,new_cmap_name='complementary_diverging
     new_cmap=LinearSegmentedColormap.from_list(new_cmap_name, new_rgb,N=n)
     return new_cmap
 
+#add a custom version of magma that helps with darker at the bottom
+def custom_magma2(n=256):
+    from colorspacious import cspace_converter
+    import scipy.interpolate
+    
+    x=np.linspace(0.12,1,n)
+    rgb_magma=matplotlib.colormaps['magma'](x)[np.newaxis,:,:3]
+    lab_magma = cspace_converter("sRGB1", "CAM02-UCS")(rgb_magma)
+    l_magma=lab_magma[0,:,0]
+    
+    lab_magma[0,:,0]=scipy.interpolate.interp1d([0, 0.12, 0.58, 1],[13, 30, 65, 99])(np.linspace(0,1,n))
+    
+    rgb_magma=cspace_converter("CAM02-UCS","sRGB1")(lab_magma)
+    rgb_magma=np.clip(rgb_magma,0,1)
+    return rgb_magma[0,:,:]
+
 def write_cmap_matfile(outfile,n=256,add_complementary=False, add_complementary_diverging=False):
 
     C={}
@@ -85,7 +101,14 @@ def write_cmap_matfile(outfile,n=256,add_complementary=False, add_complementary_
 
             print("Adding %s" % (new_cname+"_r"))
             C[new_cname+"_r"]=cmap[::-1,:]
-
+            
+    cmap=custom_magma2(n)
+    new_cname='magma2'
+    print("Adding %s" % (new_cname))
+    C[new_cname]=cmap[:,:3]
+    print("Adding %s" % (new_cname+"_r"))
+    C[new_cname+"_r"]=cmap[::-1,:]
+    
     C["version_matplotlib"]=matplotlib.__version__
     C["version_python"]="%d.%d.%d" % (sys.version_info.major,sys.version_info.minor,sys.version_info.micro)
     savemat(outfile, C, format="5", do_compression=True)
